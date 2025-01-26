@@ -1,0 +1,185 @@
+#include <iostream>
+#include <vector>
+#include <fstream>
+#include <algorithm>
+#include <cctype>
+#include <string>
+#include "Hashtag.h"
+using namespace std;
+
+///////////////// Before submitting your code
+// 1) uncomment this part since zyBooks use it.
+int main(int argc, const char* argv[]) {
+    if (argc != 3)
+    {
+        std::cout << "./project2 inputFile1 inputFile2" << std::endl;
+        return EXIT_FAILURE;
+    }
+    string inputFileName1 = argv[1];
+    string inputFileName2 = argv[2];
+    ///////////////////// uncomment above befofre submitting on zyBooks /////////////////
+//2) Comment the next 3 lines below
+//int main(void) {
+   // string inputFileName1 = "testfile4.Start";    //Do NOT change the name "inputFileName1" since used above
+   // string inputFileName2 = "testfile4.End";    //Do NOT change the name "inputFileName2" since used above
+    
+    ifstream startFile;
+    startFile.open(inputFileName1);
+    
+    ifstream endFile;
+    endFile.open(inputFileName2);
+    
+    Hashtag input("null");
+    vector <Hashtag> start;
+    vector <Hashtag> end;
+    string userWord;
+    
+    if(!startFile.is_open()){
+        cout << "Error opening file" << endl;
+    }
+    
+    if(!endFile.is_open()){
+        cout << "Error opening file" << endl;
+    }
+    
+    //insert lowercase words from file into vectors//
+    
+    //start file//
+    while(startFile >> userWord){
+        for(long unsigned int i = 0; i < userWord.length() ; i++){
+            userWord[i] = tolower(static_cast<unsigned char>(userWord[i]));
+        }
+        Hashtag input(userWord);
+        start.push_back(input);
+    }
+    startFile.close();
+    
+    //end file//
+    while(endFile >> userWord){
+        for(long unsigned int i = 0; i < userWord.length() ; i++){
+            userWord[i] = tolower(static_cast<unsigned char>(userWord[i]));
+        }
+        Hashtag input(userWord);
+        end.push_back(input);
+    }
+    endFile.close();
+    
+    //find frequency of words in vector//
+    
+    //start file//
+    for(unsigned int i = 0; i < start.size(); i++){
+        Hashtag input(start.at(i).getWord(), 1); //initializes count to 0;
+        for(unsigned int j = i + 1; j < start.size(); j++){
+            if(start.at(i).getWord() == start.at(j).getWord()){
+                input.IncrementCount();
+                start.erase(start.begin() + j); //gets ride of duplicates
+                j--;
+            }
+            
+        }
+        start.at(i) = input;
+    }
+    //end file//
+    for(unsigned int i = 0; i < end.size(); i++){
+        Hashtag input(end.at(i).getWord(), 1); //initializes count to 0;
+        for(unsigned int j = i + 1; j < end.size(); j++){
+            if(end.at(i).getWord() == end.at(j).getWord()){
+                input.IncrementCount();
+                end.erase(end.begin() + j); //gets ride of duplicates
+                j--;
+            }
+        }
+        end.at(i) = input;
+    }
+    
+    //sort every vector based on rank and alphabetical order//
+    sort(start.begin(), start.end());
+    
+    sort(end.begin(), end.end());
+    
+    //assign ranks//
+    int rank = 1;
+    for(unsigned int i = 0; i < start.size(); i++){
+        if(i == 0){ //assigns first element with rank #1
+            start.at(0).setRank(rank);
+        }
+        //if element has same count as previous element, assign with same rank//
+        else if(start.at(i).getCount() == start.at(i - 1).getCount()){ 
+            start.at(i).setRank(start.at(i - 1).getRank());
+        }
+        else{
+            rank++;
+            start.at(i).setRank(rank);
+        }
+    }
+    
+    rank = 1;
+    for(unsigned int i = 0; i < end.size(); i++){
+        if(i == 0){ //assigns first element with rank #1//
+            end.at(0).setRank(rank);
+        }
+        //if count is the same as previous element, assign the same rank//
+        else if(end.at(i).getCount() == end.at(i - 1).getCount()){
+            end.at(i).setRank(end.at(i - 1).getRank());
+        }
+        else{
+            rank++;
+            end.at(i).setRank(rank);
+        }
+    }
+    
+    //find new hashtags and position changes//
+    int maxDecrease = 0;
+    int maxIncrease = 0;
+    string wordDecrease;
+    string wordIncrease;
+    int found = 0;
+    vector <Hashtag> newWords;
+    
+    for(unsigned int i = 0; i < end.size(); i++){
+        found = 0; 
+        for(unsigned int j = 0; j < start.size(); j++){
+            if(end.at(i).getWord() == start.at(j).getWord()){
+                found = 1;
+                if(end.at(i).getRank() < start.at(j).getRank()){ //rank increased//
+                    if((start.at(j).getRank() - end.at(i).getRank()) > maxIncrease){ //checks if change larger than maxIncrease//
+                        maxIncrease = 0;
+                        if((i != 0) && (end.at(i - 1).getRank() == end.at(i).getRank())){ //rank is the same if same count
+                            maxIncrease = start.at(j).getRank() - end.at(i).getRank() - 1; 
+                        }
+                        else{
+                            maxIncrease = start.at(j).getRank() - end.at(i).getRank();
+                        }
+                        wordIncrease = end.at(i).getWord();
+                    }
+                }
+                else if(end.at(i).getRank() > start.at(j).getRank()){ //rank decreased
+                    if((end.at(i).getRank() - start.at(j).getRank()) > maxDecrease){ //checks if change smaller than maxDecrease//
+                        maxDecrease = 0;
+                        maxDecrease = end.at(i).getRank() - start.at(j).getRank();
+                        wordDecrease = end.at(i).getWord(); 
+                    }
+                }
+            }
+        }
+        if(found == 0){ //puts new words only in end file into new vector//
+            Hashtag input(end.at(i).getWord(), end.at(i).getCount());
+            newWords.push_back(input);
+            newWords.at(newWords.size() - 1).setRank(end.at(i).getRank());
+        }
+    }
+    
+    //print results//
+    cout << "Hashtag with Rank 1 in the End file: " << end.at(0).getWord() << " with " << end.at(0).getCount() << " counts." << endl;
+    cout << "Hashtag with Ranking increases the most: " << wordIncrease << " (+" << maxIncrease << " in ranking)" << endl;
+    cout << "Hashtag with Ranking decreases the most: " << wordDecrease << " (-" << maxDecrease << " in ranking)" << endl;
+    cout << "New Hashtags (first 10 by ranking) in the End file:" << endl;
+    for(unsigned int i = 0; i < newWords.size(); i++){
+        if(i < 10){
+            cout << newWords.at(i).getWord() << " (" << newWords.at(i).getCount() << "," << newWords.at(i).getRank() << ")" << endl;
+        }
+    }
+    
+    
+   return 0;
+}
